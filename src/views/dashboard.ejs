@@ -1,0 +1,38 @@
+<%- include('layout', { title: 'Customers', showLogout: true }) %>
+  <h1>Customers</h1>
+
+  <form method="post" action="/admin/customers" class="card inline-form">
+    <label>
+      New customer email
+      <input type="email" name="email" required placeholder="customer@example.com" />
+    </label>
+    <button type="submit">Create</button>
+  </form>
+
+  <% if (customers.length === 0) { %>
+    <p class="muted">No customers yet.</p>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Active licenses</th>
+          <th>Stripe</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% customers.forEach(function(c) { %>
+          <tr>
+            <td><a href="/admin/customers/<%= c.id %>"><%= c.email %></a></td>
+            <td><%= c.latest_status || '—' %></td>
+            <td><%= c.active_licenses %></td>
+            <td><%= c.stripe_customer_id ? 'linked' : '—' %></td>
+            <td><%= new Date(c.created_at * 1000).toISOString().slice(0, 10) %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+<%- include('footer') %>

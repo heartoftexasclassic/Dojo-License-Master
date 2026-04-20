@@ -1,0 +1,128 @@
+<%- include('layout', { title: customer.email, showLogout: true }) %>
+  <p><a href="/admin">&larr; All customers</a></p>
+  <h1><%= customer.email %></h1>
+  <p class="muted">
+    ID: <code><%= customer.id %></code>
+    <% if (customer.stripe_customer_id) { %>
+      · Stripe: <code><%= customer.stripe_customer_id %></code>
+    <% } %>
+  </p>
+
+  <section class="card">
+    <h2>Billing</h2>
+    <% if (stripeEnabled) { %>
+      <form method="post" action="/admin/customers/<%= customer.id %>/checkout" class="inline">
+        <button type="submit">Start checkout</button>
+      </form>
+      <% if (customer.stripe_customer_id) { %>
+        <form method="post" action="/admin/customers/<%= customer.id %>/portal" class="inline">
+          <button type="submit">Open billing portal</button>
+        </form>
+      <% } %>
+    <% } else { %>
+      <p class="muted">Stripe is not configured. Set STRIPE_SECRET_KEY to enable.</p>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <h2>Subscriptions</h2>
+    <% if (subscriptions.length === 0) { %>
+      <p class="muted">No subscriptions yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Status</th><th>Plan</th><th>Renews</th><th>Cancel at end</th></tr>
+        </thead>
+        <tbody>
+          <% subscriptions.forEach(function(s) { %>
+            <tr>
+              <td><code><%= s.id %></code></td>
+              <td><%= s.status %></td>
+              <td><%= s.plan || '—' %></td>
+              <td><%= s.current_period_end ? new Date(s.current_period_end * 1000).toISOString().slice(0, 10) : '—' %></td>
+              <td><%= s.cancel_at_period_end ? 'yes' : 'no' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <h2>Licenses</h2>
+    <form method="post" action="/admin/customers/<%= customer.id %>/licenses" class="inline-form">
+      <label>
+        Domain
+        <input type="text" name="domain" required placeholder="example.com" />
+      </label>
+      <label>
+        Subscription (optional)
+        <select name="subscription_id">
+          <option value="">— none —</option>
+          <% subscriptions.forEach(function(s) { %>
+            <option value="<%= s.id %>"><%= s.id %> (<%= s.status %>)</option>
+          <% }); %>
+        </select>
+      </label>
+      <button type="submit">Issue license</button>
+    </form>
+
+    <% if (licenses.length === 0) { %>
+      <p class="muted">No licenses issued yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Domain</th><th>Status</th><th>Last seen</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <% licenses.forEach(function(l) { %>
+            <tr>
+              <td><code><%= l.key %></code></td>
+              <td><%= l.domain %></td>
+              <td><%= l.status %></td>
+              <td>
+                <% if (l.last_seen_at) { %>
+                  <%= new Date(l.last_seen_at * 1000).toISOString().replace('T', ' ').slice(0, 16) %>
+                  <% if (l.last_seen_ip) { %> · <%= l.last_seen_ip %><% } %>
+                <% } else { %>—<% } %>
+              </td>
+              <td>
+                <% if (l.status === 'active') { %>
+                  <form method="post" action="/admin/licenses/<%= l.key %>/revoke" class="inline">
+                    <button type="submit" class="danger">Revoke</button>
+                  </form>
+                  <form method="post" action="/admin/licenses/<%= l.key %>/rebind" class="inline">
+                    <input type="text" name="domain" placeholder="new domain" required />
+                    <button type="submit">Rebind</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <h2>Recent verifications</h2>
+    <% if (recentLog.length === 0) { %>
+      <p class="muted">No verifications logged yet.</p>
+    <% } else { %>
+      <table>
+        <thead><tr><th>When</th><th>Key</th><th>Domain</th><th>IP</th><th>Result</th></tr></thead>
+        <tbody>
+          <% recentLog.forEach(function(r) { %>
+            <tr>
+              <td><%= new Date(r.at * 1000).toISOString().replace('T', ' ').slice(0, 16) %></td>
+              <td><code><%= r.license_key %></code></td>
+              <td><%= r.domain || '—' %></td>
+              <td><%= r.ip || '—' %></td>
+              <td><%= r.result %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+<%- include('footer') %>

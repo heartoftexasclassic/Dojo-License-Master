@@ -1,0 +1,17 @@
+<%- include('layout', { title: 'Log in', showLogout: false }) %>
+  <h1>Admin log in</h1>
+  <% if (error) { %>
+    <p class="error"><%= error %></p>
+  <% } %>
+  <form method="post" action="/admin/login" class="card">
+    <label>
+      Email
+      <input type="email" name="email" required autofocus />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" required />
+    </label>
+    <button type="submit">Log in</button>
+  </form>
+<%- include('footer') %>

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= typeof title !== 'undefined' ? title : 'Dojo License Master' %></title>
+  <link rel="stylesheet" href="/admin.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="/admin" class="brand">Dojo License Master</a>
+    <% if (typeof showLogout !== 'undefined' && showLogout) { %>
+      <form method="post" action="/admin/logout" class="inline">
+        <button type="submit" class="link">Log out</button>
+      </form>
+    <% } %>
+  </header>
+  <main class="container">
