@@ -1,0 +1,40 @@
+<%- include('layout', { title: 'Events log', showLogout: true }) %>
+  <nav class="subnav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/tenants">Tenants</a>
+    <a href="/admin/tiers">Tiers &amp; entitlements</a>
+    <a href="/admin/events" class="active">Events log</a>
+  </nav>
+
+  <h1>License events</h1>
+  <p class="muted">Last 200 events across all tenants. Every license-affecting action — admin edits, Stripe webhooks, token issue/revoke — is logged here.</p>
+
+  <div class="card">
+    <% if (events.length === 0) { %>
+      <p class="muted">No events yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>When</th><th>Tenant</th><th>Event</th><th>Actor</th><th>Payload</th></tr>
+        </thead>
+        <tbody>
+          <% events.forEach(function (e) { %>
+            <tr>
+              <td class="muted"><%= new Date(e.created_at * 1000).toISOString().replace('T',' ').slice(0,19) %></td>
+              <td>
+                <% if (e.tenant_id) { %>
+                  <a href="/admin/tenants/<%= e.tenant_id %>"><%= e.tenant_name || ('#' + e.tenant_id) %></a>
+                <% } else { %>
+                  <span class="muted">—</span>
+                <% } %>
+              </td>
+              <td><code><%= e.event_type %></code></td>
+              <td class="muted"><%= e.actor || '' %></td>
+              <td><code class="payload"><%= e.payload %></code></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+<%- include('footer') %>

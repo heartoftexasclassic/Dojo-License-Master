@@ -1,0 +1,144 @@
+<%- include('layout', { title: tenant.display_name, showLogout: true }) %>
+  <nav class="subnav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/tenants" class="active">Tenants</a>
+    <a href="/admin/tiers">Tiers &amp; entitlements</a>
+    <a href="/admin/events">Events log</a>
+  </nav>
+
+  <p class="muted"><a href="/admin/tenants">← All tenants</a></p>
+  <h1><%= tenant.display_name %></h1>
+  <p class="muted">
+    <code><%= tenant.slug %></code> ·
+    <span class="badge badge-<%= tenant.status %>"><%= tenant.status %></span> ·
+    Tier: <strong><%= tenant.tier_name %></strong>
+  </p>
+
+  <% if (newTokenFull) { %>
+    <div class="card token-reveal">
+      <h2>New instance token — copy now</h2>
+      <p class="muted">
+        This token will not be shown again. Paste it into the Dojo Master deployment's
+        <code>config.local.php</code> as <code>LICENSE_INSTANCE_TOKEN</code>.
+      </p>
+      <pre><code><%= newTokenFull %></code></pre>
+    </div>
+  <% } %>
+
+  <div class="card">
+    <h2>Settings</h2>
+    <form method="post" action="/admin/tenants/<%= tenant.id %>" class="inline-form">
+      <label>
+        Display name
+        <input type="text" name="display_name" value="<%= tenant.display_name %>" required />
+      </label>
+      <label>
+        Billing email
+        <input type="email" name="billing_email" value="<%= tenant.billing_email %>" required />
+      </label>
+      <label>
+        Tier
+        <select name="tier_id">
+          <% tiers.forEach(function (t) { %>
+            <option value="<%= t.id %>" <%= t.id === tenant.tier_id ? 'selected' : '' %>><%= t.display_name %></option>
+          <% }); %>
+        </select>
+      </label>
+      <label>
+        Status
+        <select name="status">
+          <% statuses.forEach(function (s) { %>
+            <option value="<%= s %>" <%= s === tenant.status ? 'selected' : '' %>><%= s %></option>
+          <% }); %>
+        </select>
+      </label>
+      <label>
+        Stripe customer ID
+        <input type="text" name="stripe_customer_id" value="<%= tenant.stripe_customer_id || '' %>" placeholder="cus_…" />
+      </label>
+      <label>
+        Stripe subscription ID
+        <input type="text" name="stripe_subscription_id" value="<%= tenant.stripe_subscription_id || '' %>" placeholder="sub_…" />
+      </label>
+      <label style="flex-basis:100%">
+        Notes
+        <input type="text" name="notes" value="<%= tenant.notes || '' %>" />
+      </label>
+      <button type="submit">Save</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Instance tokens</h2>
+    <p class="muted">
+      One token per Dojo Master deployment for this tenant. Tokens are how each install
+      authenticates to <code>POST /api/v1/license/state</code>.
+    </p>
+    <form method="post" action="/admin/tenants/<%= tenant.id %>/tokens" class="inline-form">
+      <label>
+        Label (optional)
+        <input type="text" name="label" placeholder="e.g. acme-prod" />
+      </label>
+      <button type="submit">Generate new token</button>
+    </form>
+    <% if (tokens.length === 0) { %>
+      <p class="muted">No tokens yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Prefix</th><th>Label</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% tokens.forEach(function (tk) { %>
+            <tr>
+              <td><code><%= tk.token_prefix %></code></td>
+              <td><%= tk.label || '' %></td>
+              <td class="muted"><%= new Date(tk.created_at * 1000).toISOString().slice(0,10) %></td>
+              <td class="muted">
+                <% if (tk.last_used_at) { %>
+                  <%= new Date(tk.last_used_at * 1000).toISOString().replace('T',' ').slice(0,16) %>
+                  <% if (tk.last_used_ip) { %><br /><code><%= tk.last_used_ip %></code><% } %>
+                <% } else { %>—<% } %>
+              </td>
+              <td>
+                <% if (tk.revoked_at) { %>
+                  <span class="muted">revoked</span>
+                <% } else { %>
+                  <span class="badge badge-active">active</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (!tk.revoked_at) { %>
+                  <form method="post" action="/admin/tokens/<%= tk.id %>/revoke" class="inline">
+                    <button type="submit" class="danger">Revoke</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <h2>Recent events</h2>
+    <% if (events.length === 0) { %>
+      <p class="muted">No events yet.</p>
+    <% } else { %>
+      <table>
+        <thead><tr><th>When</th><th>Event</th><th>Actor</th><th>Payload</th></tr></thead>
+        <tbody>
+          <% events.forEach(function (e) { %>
+            <tr>
+              <td class="muted"><%= new Date(e.created_at * 1000).toISOString().replace('T',' ').slice(0,19) %></td>
+              <td><code><%= e.event_type %></code></td>
+              <td class="muted"><%= e.actor || '' %></td>
+              <td><code class="payload"><%= e.payload %></code></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+<%- include('footer') %>

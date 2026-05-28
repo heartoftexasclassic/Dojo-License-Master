@@ -1,38 +1,76 @@
-<%- include('layout', { title: 'Customers', showLogout: true }) %>
-  <h1>Customers</h1>
+<%- include('layout', { title: 'Dashboard', showLogout: true }) %>
+  <nav class="subnav">
+    <a href="/admin" class="active">Dashboard</a>
+    <a href="/admin/tenants">Tenants</a>
+    <a href="/admin/tiers">Tiers &amp; entitlements</a>
+    <a href="/admin/events">Events log</a>
+  </nav>
 
-  <form method="post" action="/admin/customers" class="card inline-form">
-    <label>
-      New customer email
-      <input type="email" name="email" required placeholder="customer@example.com" />
-    </label>
-    <button type="submit">Create</button>
-  </form>
+  <h1>Dashboard</h1>
 
-  <% if (customers.length === 0) { %>
-    <p class="muted">No customers yet.</p>
-  <% } else { %>
-    <table>
-      <thead>
-        <tr>
-          <th>Email</th>
-          <th>Status</th>
-          <th>Active licenses</th>
-          <th>Stripe</th>
-          <th>Created</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% customers.forEach(function(c) { %>
-          <tr>
-            <td><a href="/admin/customers/<%= c.id %>"><%= c.email %></a></td>
-            <td><%= c.latest_status || '—' %></td>
-            <td><%= c.active_licenses %></td>
-            <td><%= c.stripe_customer_id ? 'linked' : '—' %></td>
-            <td><%= new Date(c.created_at * 1000).toISOString().slice(0, 10) %></td>
-          </tr>
-        <% }); %>
-      </tbody>
-    </table>
-  <% } %>
+  <div class="card">
+    <h2>Tenants by tier <span class="muted">(<%= totalTenants %> total)</span></h2>
+    <% if (byTier.length === 0) { %>
+      <p class="muted">No tiers configured.</p>
+    <% } else { %>
+      <table>
+        <thead><tr><th>Tier</th><th>Tenants</th></tr></thead>
+        <tbody>
+          <% byTier.forEach(function (row) { %>
+            <tr>
+              <td><%= row.display_name %> <span class="muted"><code><%= row.code %></code></span></td>
+              <td><%= row.count %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <h2>Tenants by status</h2>
+    <% if (byStatus.length === 0) { %>
+      <p class="muted">No tenants yet. <a href="/admin/tenants">Create one</a>.</p>
+    <% } else { %>
+      <table>
+        <thead><tr><th>Status</th><th>Tenants</th></tr></thead>
+        <tbody>
+          <% byStatus.forEach(function (row) { %>
+            <tr>
+              <td><span class="badge badge-<%= row.status %>"><%= row.status %></span></td>
+              <td><%= row.count %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <h2>Recent license events</h2>
+    <% if (recentEvents.length === 0) { %>
+      <p class="muted">No events yet.</p>
+    <% } else { %>
+      <table>
+        <thead><tr><th>When</th><th>Tenant</th><th>Event</th><th>Actor</th></tr></thead>
+        <tbody>
+          <% recentEvents.forEach(function (e) { %>
+            <tr>
+              <td class="muted"><%= new Date(e.created_at * 1000).toISOString().replace('T',' ').slice(0,19) %></td>
+              <td>
+                <% if (e.tenant_id) { %>
+                  <a href="/admin/tenants/<%= e.tenant_id %>"><%= e.tenant_name || ('#' + e.tenant_id) %></a>
+                <% } else { %>
+                  <span class="muted">—</span>
+                <% } %>
+              </td>
+              <td><code><%= e.event_type %></code></td>
+              <td class="muted"><%= e.actor || '' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <p><a href="/admin/events">View all events →</a></p>
+    <% } %>
+  </div>
 <%- include('footer') %>

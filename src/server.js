@@ -8,8 +8,7 @@ require('./db');
 const { seedAdminUser } = require('./lib/auth');
 
 const stripeWebhookRouter = require('./routes/stripeWebhook');
-const verifyRouter = require('./routes/verify');
-const heartbeatRouter = require('./routes/heartbeat');
+const licenseRouter = require('./routes/license');
 const adminRouter = require('./routes/admin');
 
 async function main() {
@@ -47,8 +46,7 @@ async function main() {
   app.get('/', (req, res) => res.redirect('/admin'));
   app.get('/healthz', (req, res) => res.json({ ok: true }));
 
-  app.use('/api', verifyRouter);
-  app.use('/api', heartbeatRouter);
+  app.use('/api/v1', licenseRouter);
   app.use('/admin', adminRouter);
 
   app.use((err, req, res, next) => {

@@ -1,0 +1,72 @@
+<%- include('layout', { title: 'Tiers & entitlements', showLogout: true }) %>
+  <nav class="subnav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/tenants">Tenants</a>
+    <a href="/admin/tiers" class="active">Tiers &amp; entitlements</a>
+    <a href="/admin/events">Events log</a>
+  </nav>
+
+  <h1>Tiers &amp; entitlements</h1>
+  <p class="muted">
+    Each tier maps to a set of unlocked features (booleans) and quantitative limits (integers; <code>-1</code> = unlimited).
+    Feature code in Dojo Master should call <code>Licensing::can('feature.x')</code> or <code>Licensing::limit('limit.x')</code> — never
+    hardcode tier names.
+  </p>
+
+  <% tiers.forEach(function (tier) { %>
+    <div class="card">
+      <h2><%= tier.display_name %> <span class="muted"><code><%= tier.code %></code></span></h2>
+
+      <form method="post" action="/admin/tiers/<%= tier.id %>" class="inline-form">
+        <label>
+          Display name
+          <input type="text" name="display_name" value="<%= tier.display_name %>" required />
+        </label>
+        <label>
+          Stripe price ID
+          <input type="text" name="stripe_price_id" value="<%= tier.stripe_price_id || '' %>" placeholder="price_…" />
+        </label>
+        <button type="submit">Save tier</button>
+      </form>
+
+      <form method="post" action="/admin/tiers/<%= tier.id %>/entitlements">
+        <table>
+          <thead>
+            <tr><th>Entitlement</th><th>Kind</th><th style="width:14rem">Value</th></tr>
+          </thead>
+          <tbody>
+            <% entitlements.forEach(function (e) { %>
+              <% var value = lookup[tier.id][e.id]; %>
+              <% var present = lookup[tier.id].hasOwnProperty(e.id); %>
+              <tr>
+                <td>
+                  <strong><%= e.display_name %></strong>
+                  <br /><code><%= e.code %></code>
+                  <% if (e.description) { %>
+                    <br /><span class="muted"><%= e.description %></span>
+                  <% } %>
+                </td>
+                <td class="muted"><%= e.kind %></td>
+                <td>
+                  <% if (e.kind === 'boolean') { %>
+                    <label class="inline">
+                      <input type="checkbox" name="feature_<%= e.id %>" value="1" <%= present ? 'checked' : '' %> />
+                      enabled
+                    </label>
+                  <% } else { %>
+                    <input type="number" name="limit_<%= e.id %>"
+                           value="<%= present ? value : '' %>"
+                           placeholder="leave blank to disable"
+                           step="1" />
+                    <span class="muted small"> -1 = unlimited</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <button type="submit">Save entitlements</button>
+      </form>
+    </div>
+  <% }); %>
+<%- include('footer') %>

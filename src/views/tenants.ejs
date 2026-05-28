@@ -1,0 +1,69 @@
+<%- include('layout', { title: 'Tenants', showLogout: true }) %>
+  <nav class="subnav">
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/tenants" class="active">Tenants</a>
+    <a href="/admin/tiers">Tiers &amp; entitlements</a>
+    <a href="/admin/events">Events log</a>
+  </nav>
+
+  <h1>Tenants</h1>
+
+  <div class="card">
+    <h2>New tenant</h2>
+    <form method="post" action="/admin/tenants" class="inline-form">
+      <label>
+        Display name
+        <input type="text" name="display_name" required placeholder="Acme Karate" />
+      </label>
+      <label>
+        Slug
+        <input type="text" name="slug" placeholder="auto from name" />
+      </label>
+      <label>
+        Billing email
+        <input type="email" name="billing_email" required />
+      </label>
+      <label>
+        Tier
+        <select name="tier_id" required>
+          <% tiers.forEach(function (t) { %>
+            <option value="<%= t.id %>"><%= t.display_name %></option>
+          <% }); %>
+        </select>
+      </label>
+      <button type="submit">Create tenant</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>All tenants</h2>
+    <% if (tenants.length === 0) { %>
+      <p class="muted">No tenants yet.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Slug</th>
+            <th>Tier</th>
+            <th>Status</th>
+            <th>Active tokens</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% tenants.forEach(function (t) { %>
+            <tr>
+              <td><a href="/admin/tenants/<%= t.id %>"><%= t.display_name %></a></td>
+              <td><code><%= t.slug %></code></td>
+              <td><%= t.tier_name %></td>
+              <td><span class="badge badge-<%= t.status %>"><%= t.status %></span></td>
+              <td><%= t.active_tokens %></td>
+              <td class="muted"><%= new Date(t.created_at * 1000).toISOString().slice(0,10) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+<%- include('footer') %>

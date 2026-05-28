@@ -102,3 +102,62 @@ code {
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
 }
+.small { font-size: 0.8em; }
+
+.subnav {
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.subnav a {
+  color: #374151;
+  text-decoration: none;
+  font-size: 0.95rem;
+  padding-bottom: 0.25rem;
+}
+.subnav a.active {
+  color: #111827;
+  font-weight: 600;
+  border-bottom: 2px solid #1f2937;
+}
+.subnav a:hover { color: #111827; }
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #374151;
+}
+.badge-trialing  { background: #dbeafe; color: #1e3a8a; }
+.badge-active    { background: #d1fae5; color: #065f46; }
+.badge-past_due  { background: #fef3c7; color: #92400e; }
+.badge-suspended { background: #fee2e2; color: #991b1b; }
+.badge-cancelled { background: #f3f4f6; color: #6b7280; }
+
+.token-reveal {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+.token-reveal pre {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+}
+.token-reveal pre code { background: transparent; padding: 0; color: inherit; }
+
+code.payload {
+  display: inline-block;
+  max-width: 32rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
