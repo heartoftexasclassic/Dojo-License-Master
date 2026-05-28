@@ -122,6 +122,80 @@
   </div>
 
   <div class="card">
+    <h2>Reported usage</h2>
+    <% if (!tenant.last_usage_reported_at) { %>
+      <p class="muted">
+        No usage reported yet. The deployment will report counts on its next
+        <code>/api/v1/license/state</code> call.
+      </p>
+    <% } else { %>
+      <table>
+        <tbody>
+          <tr>
+            <th style="width:14rem">Students</th>
+            <td><%= tenant.last_students != null ? tenant.last_students : '—' %></td>
+          </tr>
+          <tr>
+            <th>Admin users</th>
+            <td><%= tenant.last_admin_users != null ? tenant.last_admin_users : '—' %></td>
+          </tr>
+          <tr>
+            <th>Last reported</th>
+            <td class="muted">
+              <%= new Date(tenant.last_usage_reported_at * 1000).toISOString().replace('T',' ').slice(0,19) %>
+            </td>
+          </tr>
+          <tr>
+            <th>Billing config</th>
+            <td>
+              <% if (!tenant.metered_unit && !tenant.flat_amount_cents) { %>
+                <span class="muted">Tier has no billing configured.</span>
+              <% } else if (!tenant.metered_unit) { %>
+                Flat $<%= (tenant.flat_amount_cents / 100).toFixed(2) %>
+                / <%= tenant.billing_interval || 'monthly' %>
+              <% } else if (!tenant.flat_amount_cents) { %>
+                Metered: $<%= (tenant.unit_amount_cents / 100).toFixed(2) %>
+                per <%= tenant.metered_unit %>
+                <% if (tenant.included_units) { %>(first <%= tenant.included_units %> included)<% } %>
+                / <%= tenant.billing_interval || 'monthly' %>
+              <% } else { %>
+                Mixed: $<%= (tenant.flat_amount_cents / 100).toFixed(2) %> base
+                + $<%= (tenant.unit_amount_cents / 100).toFixed(2) %>
+                per <%= tenant.metered_unit %> over <%= tenant.included_units || 0 %>
+                / <%= tenant.billing_interval || 'monthly' %>
+              <% } %>
+            </td>
+          </tr>
+          <tr>
+            <th>Estimated current bill</th>
+            <td>
+              <strong>$<%= (estimatedBillCents / 100).toFixed(2) %></strong>
+              <span class="muted">/ <%= tenant.billing_interval || 'monthly' %></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    <% } %>
+
+    <% if (usageHistory.length > 0) { %>
+      <h3 class="muted" style="margin-top:1rem;font-size:0.9rem">Last 10 reports</h3>
+      <table>
+        <thead><tr><th>When</th><th>Students</th><th>Admin users</th><th>Source</th></tr></thead>
+        <tbody>
+          <% usageHistory.forEach(function (u) { %>
+            <tr>
+              <td class="muted"><%= new Date(u.reported_at * 1000).toISOString().replace('T',' ').slice(0,19) %></td>
+              <td><%= u.students != null ? u.students : '—' %></td>
+              <td><%= u.admin_users != null ? u.admin_users : '—' %></td>
+              <td class="muted"><code><%= u.source %></code></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card">
     <h2>Recent events</h2>
     <% if (events.length === 0) { %>
       <p class="muted">No events yet.</p>

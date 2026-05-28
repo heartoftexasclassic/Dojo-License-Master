@@ -23,11 +23,66 @@
           <input type="text" name="display_name" value="<%= tier.display_name %>" required />
         </label>
         <label>
-          Stripe price ID
+          Billing interval
+          <select name="billing_interval">
+            <% billingIntervals.forEach(function (iv) { %>
+              <option value="<%= iv %>" <%= (tier.billing_interval || 'monthly') === iv ? 'selected' : '' %>><%= iv %></option>
+            <% }); %>
+          </select>
+        </label>
+        <label>
+          Flat amount ($)
+          <input type="number" step="0.01" min="0" name="flat_amount_dollars"
+                 value="<%= centsToDollarsString(tier.flat_amount_cents) %>"
+                 placeholder="e.g. 29.00" />
+        </label>
+        <label>
+          Stripe price ID (flat)
           <input type="text" name="stripe_price_id" value="<%= tier.stripe_price_id || '' %>" placeholder="price_…" />
         </label>
+
+        <label>
+          Metered unit
+          <select name="metered_unit">
+            <option value="" <%= !tier.metered_unit ? 'selected' : '' %>>— none —</option>
+            <% meteredUnits.forEach(function (u) { %>
+              <option value="<%= u %>" <%= tier.metered_unit === u ? 'selected' : '' %>><%= u %></option>
+            <% }); %>
+          </select>
+        </label>
+        <label>
+          Included units
+          <input type="number" min="0" step="1" name="included_units"
+                 value="<%= tier.included_units != null ? tier.included_units : 0 %>"
+                 placeholder="0" />
+        </label>
+        <label>
+          Per-unit amount ($)
+          <input type="number" step="0.01" min="0" name="unit_amount_dollars"
+                 value="<%= centsToDollarsString(tier.unit_amount_cents) %>"
+                 placeholder="e.g. 1.00" />
+        </label>
+        <label>
+          Stripe price ID (metered)
+          <input type="text" name="stripe_metered_price_id"
+                 value="<%= tier.stripe_metered_price_id || '' %>" placeholder="price_…" />
+        </label>
+
         <button type="submit">Save tier</button>
       </form>
+
+      <p class="muted small">
+        <% if (!tier.metered_unit && !tier.flat_amount_cents) { %>
+          No billing configured yet.
+        <% } else if (!tier.metered_unit) { %>
+          Flat: $<%= centsToDollarsString(tier.flat_amount_cents) %> / <%= tier.billing_interval || 'monthly' %>.
+        <% } else if (!tier.flat_amount_cents) { %>
+          Metered: $<%= centsToDollarsString(tier.unit_amount_cents) %> per <%= tier.metered_unit %> / <%= tier.billing_interval || 'monthly' %>
+          <% if (tier.included_units) { %>(first <%= tier.included_units %> included)<% } %>.
+        <% } else { %>
+          Mixed: $<%= centsToDollarsString(tier.flat_amount_cents) %> base + $<%= centsToDollarsString(tier.unit_amount_cents) %> per <%= tier.metered_unit %> over <%= tier.included_units || 0 %> / <%= tier.billing_interval || 'monthly' %>.
+        <% } %>
+      </p>
 
       <form method="post" action="/admin/tiers/<%= tier.id %>/entitlements">
         <table>

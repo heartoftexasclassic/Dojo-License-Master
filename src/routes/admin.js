@@ -13,8 +13,40 @@ const TENANT_STATUSES = [
   'cancelled',
 ];
 
+const METERED_UNITS = ['students', 'admin_users'];
+const BILLING_INTERVALS = ['monthly', 'annual'];
+
 function now() {
   return Math.floor(Date.now() / 1000);
+}
+
+function dollarsToCents(raw) {
+  if (raw === undefined || raw === null) return null;
+  const s = String(raw).trim();
+  if (s === '') return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100);
+}
+
+function centsToDollarsString(c) {
+  if (c === null || c === undefined) return '';
+  return (c / 100).toFixed(2);
+}
+
+function estimateBillCents(tier, lastStudents, lastAdminUsers) {
+  let total = tier.flat_amount_cents || 0;
+  if (tier.metered_unit && tier.unit_amount_cents) {
+    const count =
+      tier.metered_unit === 'students'
+        ? lastStudents || 0
+        : tier.metered_unit === 'admin_users'
+        ? lastAdminUsers || 0
+        : 0;
+    const over = Math.max(0, count - (tier.included_units || 0));
+    total += over * tier.unit_amount_cents;
+  }
+  return total;
 }
 
 function slugify(s) {
@@ -156,7 +188,9 @@ router.get('/tenants/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const tenant = db
     .prepare(
-      `SELECT t.*, ti.code AS tier_code, ti.display_name AS tier_name
+      `SELECT t.*, ti.code AS tier_code, ti.display_name AS tier_name,
+              ti.flat_amount_cents, ti.metered_unit, ti.included_units,
+              ti.unit_amount_cents, ti.billing_interval
        FROM tenants t
        JOIN tiers ti ON ti.id = t.tier_id
        WHERE t.id = ?`,
@@ -181,6 +215,21 @@ router.get('/tenants/:id', requireAdmin, (req, res) => {
     )
     .all(id);
 
+  const usageHistory = db
+    .prepare(
+      `SELECT * FROM usage_reports
+       WHERE tenant_id = ?
+       ORDER BY reported_at DESC
+       LIMIT 10`,
+    )
+    .all(id);
+
+  const estimatedBillCents = estimateBillCents(
+    tenant,
+    tenant.last_students,
+    tenant.last_admin_users,
+  );
+
   const newTokenFull = req.session.newTokenFull;
   const newTokenTenantId = req.session.newTokenTenantId;
   if (newTokenFull && newTokenTenantId === id) {
@@ -194,6 +243,8 @@ router.get('/tenants/:id', requireAdmin, (req, res) => {
     statuses: TENANT_STATUSES,
     tokens,
     events,
+    usageHistory,
+    estimatedBillCents,
     newTokenFull: newTokenTenantId === id ? newTokenFull : null,
   });
 });
@@ -314,7 +365,14 @@ router.get('/tiers', requireAdmin, (req, res) => {
   for (const row of map) {
     lookup[row.tier_id][row.entitlement_id] = row.value;
   }
-  res.render('tiers', { tiers, entitlements, lookup });
+  res.render('tiers', {
+    tiers,
+    entitlements,
+    lookup,
+    meteredUnits: METERED_UNITS,
+    billingIntervals: BILLING_INTERVALS,
+    centsToDollarsString,
+  });
 });
 
 router.post('/tiers/:id', requireAdmin, (req, res) => {
@@ -322,12 +380,50 @@ router.post('/tiers/:id', requireAdmin, (req, res) => {
   const tier = db.prepare('SELECT * FROM tiers WHERE id = ?').get(id);
   if (!tier) return res.status(404).send('Tier not found');
   const body = req.body || {};
+
   const display_name = String(body.display_name || tier.display_name).trim();
   const stripe_price_id =
     String(body.stripe_price_id || '').trim() || null;
+  const stripe_metered_price_id =
+    String(body.stripe_metered_price_id || '').trim() || null;
+  const billing_interval = BILLING_INTERVALS.includes(body.billing_interval)
+    ? body.billing_interval
+    : 'monthly';
+
+  const flat_amount_cents = dollarsToCents(body.flat_amount_dollars);
+  const unit_amount_cents = dollarsToCents(body.unit_amount_dollars);
+
+  let metered_unit = String(body.metered_unit || '').trim() || null;
+  if (metered_unit && !METERED_UNITS.includes(metered_unit)) {
+    metered_unit = null;
+  }
+  const included_units = Math.max(
+    0,
+    parseInt(body.included_units, 10) || 0,
+  );
+
   db.prepare(
-    `UPDATE tiers SET display_name = ?, stripe_price_id = ? WHERE id = ?`,
-  ).run(display_name, stripe_price_id, id);
+    `UPDATE tiers SET
+       display_name = ?,
+       stripe_price_id = ?,
+       stripe_metered_price_id = ?,
+       billing_interval = ?,
+       flat_amount_cents = ?,
+       metered_unit = ?,
+       included_units = ?,
+       unit_amount_cents = ?
+     WHERE id = ?`,
+  ).run(
+    display_name,
+    stripe_price_id,
+    stripe_metered_price_id,
+    billing_interval,
+    flat_amount_cents,
+    metered_unit,
+    included_units,
+    unit_amount_cents,
+    id,
+  );
   res.redirect('/admin/tiers');
 });
 

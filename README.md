@@ -42,6 +42,32 @@ Visit http://localhost:3000/admin/login.
 | `license_events`   | Audit log of every license-affecting change                    |
 | `admin_users`      | Vendor staff who log in to the admin UI                        |
 
+## Billing model
+
+Each tier picks one of three billing shapes, configured in the admin UI
+(**Tiers & entitlements**):
+
+| Shape       | Fields set                                                                              | Example                                    |
+| ----------- | --------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Flat**    | `flat_amount_cents` only                                                                | $29/mo, no usage metering                  |
+| **Metered** | `metered_unit` + `unit_amount_cents` (+ optional `included_units`)                      | $1/student/mo                              |
+| **Mixed**   | `flat_amount_cents` + `metered_unit` + `unit_amount_cents` + `included_units`           | $50 base + $1 per student over 50          |
+
+`metered_unit` is one of `students` or `admin_users`. The unit count is
+**reported by the Dojo Master deployment on each license poll** — see the
+`usage` field on `POST /api/v1/license/state` below. The licensing service
+never derives the count itself; it just stores what's reported.
+
+Estimated bill is computed and shown on each tenant's admin page:
+
+```
+flat_amount + max(0, reported_count - included_units) × unit_amount
+```
+
+For Stripe billing, set `stripe_price_id` (the flat component) and
+`stripe_metered_price_id` (the metered component) per tier. Pushing usage
+records to Stripe is wired separately (not in this commit).
+
 ## Entitlement model
 
 Two kinds of entitlement, both stored in the same `entitlements` table:
@@ -67,7 +93,16 @@ The only endpoint Dojo Master calls. Authenticated via instance token.
 ```http
 POST /api/v1/license/state
 Authorization: Bearer dlm_a7d0df05.smpbuUpOm5jjClHrRQukJj0ZbASQjiQnKC3fALGTJT8
+Content-Type: application/json
+
+{
+  "usage": { "students": 87, "admin_users": 4 }
+}
 ```
+
+The `usage` block is optional. When present, the server stores the counts
+on `tenants.last_*` and appends a row to `usage_reports`. Send it on every
+poll if the tier is metered; safe to omit on flat tiers.
 
 Response:
 
@@ -83,6 +118,14 @@ Response:
   "status": "active",
   "features": ["feature.events", "feature.advanced_reports", "feature.kiosk", "feature.mobile_app"],
   "limits": { "limit.schools": 5, "limit.admin_users": 15 },
+  "billing": {
+    "interval": "monthly",
+    "flat_amount_cents": 5000,
+    "metered_unit": "students",
+    "included_units": 50,
+    "unit_amount_cents": 100
+  },
+  "usage_acknowledged": { "students": 87, "admin_users": 4, "reported_at": 1779990924 },
   "trial_ends_at": null,
   "current_period_end": null,
   "polled_at": 1779978045
